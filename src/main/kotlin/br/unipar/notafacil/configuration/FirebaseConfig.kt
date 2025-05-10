@@ -13,28 +13,21 @@ import java.io.ByteArrayInputStream
 @Configuration
 class FirestoreConfig {
 
+    private fun getCredentialsJson(): String {
+        return System.getenv("GOOGLE_CREDENTIALS_JSON")
+            ?: dotenv()["GOOGLE_CREDENTIALS_JSON"]
+            ?: throw IllegalStateException("GOOGLE_CREDENTIALS_JSON not found in environment or .env file.")
+    }
+
     @Bean
     fun firestore(): Firestore {
-        // Tenta primeiro via variável de ambiente real (produção)
-        var credentialsJson = System.getenv("GOOGLE_CREDENTIALS_JSON")
-
-        // Se estiver rodando localmente, tenta usar o .env
-        if (credentialsJson.isNullOrBlank()) {
-            val dotenv = dotenv()
-            credentialsJson = dotenv["GOOGLE_CREDENTIALS_JSON"]
-        }
-
-        if (credentialsJson.isNullOrBlank()) {
-            throw IllegalStateException("GOOGLE_CREDENTIALS_JSON not found in environment or .env file.")
-        }
-
+        val credentialsJson = getCredentialsJson()
         val credentialsStream = ByteArrayInputStream(credentialsJson.toByteArray())
 
-        val options = FirebaseOptions.builder()
-            .setCredentials(GoogleCredentials.fromStream(credentialsStream))
-            .build()
-
         if (FirebaseApp.getApps().isEmpty()) {
+            val options = FirebaseOptions.builder()
+                .setCredentials(GoogleCredentials.fromStream(credentialsStream))
+                .build()
             FirebaseApp.initializeApp(options)
         }
 
